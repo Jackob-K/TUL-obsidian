@@ -1,3 +1,17 @@
 .DS_Store
+._*
+
 __pycache__/
 *.py[cod]
+
+# Lokální výstupy LaTeXu/Pandocu. PDF assety a šablony se neignorují globálně.
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+
+# Ukázkový vault může při testování generovat vlastní exporty.
+examples/demo-vault/*/*.pdf
