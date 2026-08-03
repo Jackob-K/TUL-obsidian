@@ -1,0 +1,98 @@
+$if(use-university-font)$
+\PassOptionsToPackage{localfonts}{tul}
+$endif$
+\documentclass[$faculty$,$if(tul-english)$EN,$endif$SP,article]{tulthesis}
+
+% jazyk
+\usepackage[$babel-language$]{babel}
+
+% TUL titulní list
+\TULtitle{$subject-title$}{$subject-title$}
+\TULauthor{$if(author-title)$$author-title$ $endif$$author-name$}
+\TULprogramme{$programme-code$}{$programme-name-cs$}{$programme-name-en$}
+\TULbranch{$branch-code$}{$branch-name-cs$}{$branch-name-en$}
+\TULyear{$year$}
+
+% matematika
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+% tabulky (pandoc generuje všechny tyto konstrukce)
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{calc}      % <<< KLÍČOVÉ PRO \real{...}
+
+% odkazy, TOC, PDF záložky
+\hypersetup{colorlinks=true, linkcolor=\tulcolor, urlcolor=\tulcolor, citecolor=\tulcolor}
+
+% pandoc edge-case: unnumbered headers
+\newcounter{none}
+
+\usepackage{titlesec}
+
+\newcommand{\sectionbreak}{\clearpage}
+\titleformat*{\subsection}{\color{\titlecolor}\TULmono\large\raggedright}
+\titleformat*{\subsubsection}{\color{\titlecolor}\TULmono\normalsize\raggedright}
+
+\usepackage{tabularx}
+
+\usepackage{graphicx}
+\usepackage{adjustbox}
+
+% Pandoc compatibility
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\usepackage{float}
+\usepackage{adjustbox}
+
+\newcommand{\pandocbounded}[1]{%
+  \begin{figure}[H]
+    \centering
+    \begin{adjustbox}{max width=\linewidth}
+      #1
+    \end{adjustbox}
+  \end{figure}}
+
+\newcommand{\NotesTitle}{{
+\thispagestyle{TULheaderonly}
+\sffamily
+\mbox{}
+\vfill
+\hspace*{-2.1cm}\begin{minipage}{\dimexpr\linewidth+4.2cm\relax}
+{\noindent\large\bfseries $document-label$\\[\bigskipamount]
+\raggedright\fontsize{18pt}{22pt}\selectfont\color{\tulcolor}\bfseries
+$subject-title$\par}
+
+\bigskip
+\bigskip
+
+\newdimen\NotesValues
+\setlength{\NotesValues}{\linewidth}
+\addtolength{\NotesValues}{-15em}
+\noindent\begin{tabular}{@{}p{14em}p{\NotesValues}@{}}
+\itshape $programme-label$ & $programme-code$ -- $programme-name$ \\
+\itshape $branch-label$ & $branch-code$ -- $branch-name$ \\
+\itshape $author-label$ & \bfseries $if(author-title)$$author-title$ $endif$$author-name$ \\
+\rule{0pt}{1cm} & $city$ $year$ \\
+\end{tabular}
+
+\end{minipage}
+\cleardoublepage
+}}
+
+
+\begin{document}
+
+\NotesTitle
+
+$if(toc)$
+\tableofcontents
+\newpage
+$endif$
+
+$body$
+
+\end{document}

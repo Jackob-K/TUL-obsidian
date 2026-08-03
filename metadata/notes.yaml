@@ -1,0 +1,6 @@
+documentclass: article
+lang: cs
+
+numbersections: true
+toc: true
+toc-depth: 3
