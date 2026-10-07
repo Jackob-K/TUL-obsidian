@@ -14,4 +14,4 @@ __pycache__/
 *.toc
 
 # Ukázkový vault může při testování generovat vlastní exporty.
-examples/demo-vault/*/*.pdf
+examples/demo-vault/**/*.pdf

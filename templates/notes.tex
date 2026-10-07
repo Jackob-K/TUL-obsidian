@@ -7,8 +7,8 @@ $endif$
 \usepackage[$babel-language$]{babel}
 
 % TUL titulní list
-\TULtitle{$subject-title$}{$subject-title$}
-\TULauthor{$if(author-title)$$author-title$ $endif$$author-name$}
+\TULtitle{$if(protocol-title)$$protocol-title$$else$$subject-title$$endif$}{$if(protocol-title)$$protocol-title$$else$$subject-title$$endif$}
+\TULauthor{$if(authors)$$for(authors)$$authors$$sep$, $endfor$$else$$if(author-title)$$author-title$ $endif$$author-name$$endif$}
 \TULprogramme{$programme-code$}{$programme-name-cs$}{$programme-name-en$}
 \TULbranch{$branch-code$}{$branch-name-cs$}{$branch-name-en$}
 \TULyear{$year$}
@@ -51,7 +51,7 @@ $endif$
 \newcommand{\pandocbounded}[1]{%
   \begin{figure}[H]
     \centering
-    \begin{adjustbox}{max width=\linewidth}
+    \begin{adjustbox}{max width=\linewidth,max totalheight=.8\textheight,keepaspectratio}
       #1
     \end{adjustbox}
   \end{figure}}
@@ -64,7 +64,7 @@ $endif$
 \hspace*{-2.1cm}\begin{minipage}{\dimexpr\linewidth+4.2cm\relax}
 {\noindent\large\bfseries $document-label$\\[\bigskipamount]
 \raggedright\fontsize{18pt}{22pt}\selectfont\color{\tulcolor}\bfseries
-$subject-title$\par}
+$if(protocol-title)$$protocol-title$$else$$subject-title$$endif$\par}
 
 \bigskip
 \bigskip
@@ -75,7 +75,14 @@ $subject-title$\par}
 \noindent\begin{tabular}{@{}p{14em}p{\NotesValues}@{}}
 \itshape $programme-label$ & $programme-code$ -- $programme-name$ \\
 \itshape $branch-label$ & $branch-code$ -- $branch-name$ \\
+$if(authors)$
+\itshape $authors-label$ & \bfseries $for(authors)$$authors$$sep$\newline $endfor$ \\
+$else$
 \itshape $author-label$ & \bfseries $if(author-title)$$author-title$ $endif$$author-name$ \\
+$endif$
+$if(teacher)$
+\itshape $teacher-label$ & \bfseries $teacher$ \\
+$endif$
 \rule{0pt}{1cm} & $city$ $year$ \\
 \end{tabular}
 

@@ -34,6 +34,8 @@ LANGUAGE_METADATA = {
         "programme-label": "Studijní program:",
         "branch-label": "Studijní obor:",
         "author-label": "Autor:",
+        "authors-label": "Autoři:",
+        "teacher-label": "Vyučující:",
     },
     "en": {
         "lang": "en",
@@ -43,6 +45,8 @@ LANGUAGE_METADATA = {
         "programme-label": "Study programme:",
         "branch-label": "Field of study:",
         "author-label": "Author:",
+        "authors-label": "Authors:",
+        "teacher-label": "Teacher:",
     },
 }
 

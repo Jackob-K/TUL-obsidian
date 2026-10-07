@@ -1,0 +1,9 @@
+{
+  "id": "tul-pdf-export",
+  "name": "TUL PDF Export",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Choose a subject dynamically and export its notes with the TUL PDF template.",
+  "author": "Jakub Koci",
+  "isDesktopOnly": true
+}

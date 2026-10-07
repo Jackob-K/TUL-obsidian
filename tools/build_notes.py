@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 
-SUBJECT_PATTERN = re.compile(r"^\d{2}_.+")
+SUBJECT_PATTERN = re.compile(r"^\d{2}_.+$")
 
 
 def available_subjects(vault_root: Path) -> list[Path]:
@@ -20,7 +20,7 @@ def available_subjects(vault_root: Path) -> list[Path]:
         for path in vault_root.iterdir()
         if path.is_dir()
         and SUBJECT_PATTERN.match(path.name)
-        and any(path.glob("*.md"))
+        and any(file.is_file() and file.suffix.lower() == ".md" for file in path.iterdir())
     )
 
 
@@ -34,6 +34,34 @@ def subject_from_path(raw_path: str, vault_root: Path) -> Path:
             return candidate
 
     raise ValueError(f"Cesta nepatří do složky předmětu v tomto vaultu: {raw_path}")
+
+
+def note_from_path(raw_path: str, vault_root: Path) -> Path:
+    path = Path(raw_path).expanduser()
+    if not path.is_absolute():
+        path = vault_root / path
+    path = path.resolve()
+
+    if not path.is_file() or path.suffix.lower() != ".md":
+        raise ValueError(f"Markdown soubor nebyl nalezen: {raw_path}")
+    if path.parent.parent != vault_root or not SUBJECT_PATTERN.match(path.parent.name):
+        raise ValueError(
+            "Poznámka musí ležet přímo ve složce předmětu v tomto vaultu."
+        )
+    return path
+
+
+def subfolder_by_name(name: str, subject: Path) -> Path:
+    if not name or name in {".", ".."} or Path(name).name != name:
+        raise ValueError("Podsložka musí být zadána pouze svým názvem.")
+    folder = (subject / name).resolve()
+    if folder.parent != subject or not folder.is_dir():
+        raise ValueError(f"Podsložka '{name}' nebyla nalezena přímo v {subject.name}.")
+    if not any(
+        file.is_file() and file.suffix.lower() == ".md" for file in folder.iterdir()
+    ):
+        raise ValueError(f"Podsložka '{name}' neobsahuje Markdown soubory přímo ve složce.")
+    return folder
 
 
 def subject_by_name(name: str, subjects: list[Path]) -> Path:
@@ -61,16 +89,29 @@ def select_subject(subjects: list[Path]) -> Path:
         print(f"Zadej číslo 1 až {len(subjects)}.")
 
 
-def build(subject: Path, vault_root: Path) -> None:
+def build(
+    subject: Path,
+    vault_root: Path,
+    source_file: Path | None = None,
+    source_folder: Path | None = None,
+) -> None:
     env = os.environ.copy()
     extra_paths = ["/usr/local/bin", "/opt/homebrew/bin", "/Library/TeX/texbin"]
     env["PATH"] = os.pathsep.join(extra_paths + [env.get("PATH", "")])
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     build_script = vault_root / "_shared" / "build" / "build-notes.sh"
 
-    print(f"Generuji PDF pro {subject.name}...")
+    if source_file:
+        command = [str(build_script), "--file", str(source_file)]
+        print(f"Generuji PDF pro {source_file.name}...")
+    elif source_folder:
+        command = [str(build_script), subject.name, "--folder", source_folder.name]
+        print(f"Generuji PDF pro {subject.name}/{source_folder.name}...")
+    else:
+        command = [str(build_script), subject.name]
+        print(f"Generuji PDF pro {subject.name}...")
     result = subprocess.run(
-        [str(build_script), subject.name],
+        command,
         cwd=vault_root,
         env=env,
         check=True,
@@ -101,6 +142,16 @@ def parse_args() -> argparse.Namespace:
         help="Určí předmět podle cesty k otevřené poznámce (pro Obsidian).",
     )
     parser.add_argument(
+        "--file",
+        metavar="PATH",
+        help="Exportuje pouze zadaný Markdown soubor ve složce předmětu.",
+    )
+    parser.add_argument(
+        "--folder",
+        metavar="NAME",
+        help="Exportuje pouze Markdown soubory přímo v podsložce vybraného předmětu.",
+    )
+    parser.add_argument(
         "--list",
         action="store_true",
         help="Vypíše dostupné předměty a skončí.",
@@ -122,7 +173,20 @@ def main() -> int:
         return 2
 
     try:
-        if args.from_path:
+        selected_modes = sum(bool(value) for value in (args.subject, args.from_path, args.file))
+        if selected_modes > 1:
+            raise ValueError("Použij pouze jeden z argumentů subject, --from-path nebo --file.")
+        if args.folder and not args.subject:
+            raise ValueError("Pro export podsložky zadej také název předmětu.")
+        if args.folder and args.file:
+            raise ValueError("Argumenty --folder a --file nelze kombinovat.")
+
+        source_file = None
+        source_folder = None
+        if args.file:
+            source_file = note_from_path(args.file, vault_root)
+            subject = source_file.parent
+        elif args.from_path:
             subject = subject_from_path(args.from_path, vault_root)
             if subject not in subjects:
                 raise ValueError(
@@ -130,10 +194,12 @@ def main() -> int:
                 )
         elif args.subject:
             subject = subject_by_name(args.subject, subjects)
+            if args.folder:
+                source_folder = subfolder_by_name(args.folder, subject)
         else:
             subject = select_subject(subjects)
 
-        build(subject, vault_root)
+        build(subject, vault_root, source_file, source_folder)
         return 0
     except KeyboardInterrupt:
         print("\nExport zrušen.")

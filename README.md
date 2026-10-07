@@ -13,7 +13,7 @@ upravené PDF s titulní stranou, logem TUL a jednotným typografickým vzhledem
 
 ## ✨ Co to umí
 
-- exportuje poznámky z vybraného předmětu do jednoho PDF,
+- exportuje celý předmět nebo jeden konkrétní Markdown soubor do PDF,
 - používá vizuální styl TUL přes XeLaTeX a přiložené univerzitní podklady,
 - načítá údaje studenta a práce z jednoduchého `config.md`,
 - podporuje Markdown poznámky psané přímo v Obsidianu,
@@ -28,6 +28,7 @@ Pro běžné použití budete potřebovat:
 
 - [Obsidian](https://obsidian.md/),
 - komunitní plugin **Shell commands** pro Obsidian,
+- doplňkový plugin **TUL PDF Export** ze složky `obsidian-plugin/`,
 - Python 3,
 - Pandoc,
 - XeLaTeX, například z MacTeX nebo BasicTeX.
@@ -77,6 +78,16 @@ cp _shared/config/config-template.md config.md
 Soubor `config.md` je obyčejná poznámka v kořeni vaultu. Hodnota
 `use-university-font` se v Obsidianu zobrazí jako zaškrtávací políčko.
 
+5. Připojte výběrový plugin pro dynamickou nabídku předmětů:
+
+```bash
+mkdir -p .obsidian/plugins
+ln -s ../../_shared/obsidian-plugin .obsidian/plugins/tul-pdf-export
+```
+
+Potom v `.obsidian/community-plugins.json` přidejte do seznamu povolených
+pluginů položku `tul-pdf-export` a Obsidian restartujte nebo znovu načtěte.
+
 ## 📦 Export
 
 ### Export z Obsidianu
@@ -85,11 +96,25 @@ Ve vaultu s nastaveným pluginem Shell commands:
 
 1. otevřete paletu příkazů `Cmd+P`,
 2. spusťte `Execute: Export předmětu do PDF`,
-3. vyberte předmět,
-4. klikněte na `Vytvořit PDF`.
+3. ve vyhledávacím seznamu zvolte předmět a potvrďte `Enter`,
+4. v jednom seznamu zvolte export kořenových poznámek nebo konkrétní podsložku
+   a potvrďte `Enter`.
 
-Výsledek vznikne ve složce vybraného předmětu. Název má tvar
-`<KOD_PREDMETU>_<AUTOR>_notes.pdf`, například
+Výběr se načítá při každém spuštění přímo ze složek v kořeni vaultu. Zobrazí
+složky ve tvaru `12_PAS`, pokud v nich leží alespoň jeden Markdown soubor přímo
+v kořeni. Dialog umožňuje vyhledávání a seznam se při větším počtu položek
+posouvá.
+
+Výběr měření zahrnuje jen přímé podsložky s alespoň jedním Markdown souborem
+přímo v nich. Exportuje se pouze obsah této podsložky, nikoli sousední měření
+ani její další vnořené složky. První položka seznamu exportuje jen Markdown
+soubory přímo v kořeni předmětu. Pokud předmět nemá podsložky s Markdowny,
+zobrazí se pouze tato kořenová volba. U měření určuje `protocol-title` název
+PDF; pokud chybí, použije se bezpečný název odvozený od předmětu, složky
+měření a autora.
+
+Výsledek vznikne ve složce zvoleného rozsahu exportu. Pro kořenový export má
+název tvar `<KOD_PREDMETU>_<AUTOR>_notes.pdf`, například
 `DEMO_BcAlexNovak_notes.pdf`.
 
 ### Export z terminálu
@@ -98,6 +123,12 @@ Přímý export jednoho předmětu:
 
 ```bash
 python3 _shared/tools/build_notes.py --vault . 11_IRO
+```
+
+Export pouze Markdown souborů přímo v podsložce:
+
+```bash
+python3 _shared/tools/build_notes.py --vault . 15_EMM --folder 1501_mereniViskozityTenzometrem
 ```
 
 Interaktivní výběr předmětu:
@@ -112,6 +143,48 @@ Výpis dostupných předmětů:
 python3 _shared/tools/build_notes.py --vault . --list
 ```
 
+Export jednoho souboru, například skupinového protokolu:
+
+```bash
+python3 _shared/tools/build_notes.py --vault . --file 13_MER/Protokol_01.md
+```
+
+Stejný export lze spustit přímo nízkoúrovňovým buildem:
+
+```bash
+./_shared/build/build-notes.sh --file 13_MER/Protokol_01.md
+```
+
+Bez vlastnosti `protocol-title` se výstup uloží jako `Protokol_01_TUL.pdf`.
+Pokud ji vyplníte, její hodnota se použije jako název protokolu na titulní
+straně i jako název PDF, například `Měření převodovky.pdf`.
+
+### Metadata skupinového protokolu
+
+Vlastnosti z YAML hlavičky exportované poznámky mají přednost před hodnotami z
+kořenového `config.md`. Seznam `authors` a text `teacher` lze upravovat přímo
+v panelu Properties v Obsidianu. Tituly se zapisují jako součást celého jména:
+
+```yaml
+---
+document-label: "Laboratorní protokol"
+protocol-title: "Měření přechodové charakteristiky"
+authors:
+  - "Bc. Anna Nováková"
+  - "Bc. Petr Svoboda"
+teacher: "doc. Ing. Jan Dvořák, Ph.D."
+---
+```
+
+- `document-label` určuje typ dokumentu na titulní straně.
+- `protocol-title` určuje název na titulní straně i název výstupního PDF.
+- `authors` je seznam autorů včetně titulů; každý autor se vypíše na samostatný řádek.
+- `teacher` je jméno vyučujícího včetně titulů.
+
+Pokud `authors` chybí, titulní strana použije původní `author-name` a
+`author-title` z `config.md`. Ostatní neuvedené vlastnosti se stejným způsobem
+doplní z konfigurace a společných výchozích hodnot.
+
 ## 🗂️ Struktura vaultu
 
 Složky předmětů začínají dvěma číslicemi a podtržítkem:
@@ -124,6 +197,27 @@ Složky předmětů začínají dvěma číslicemi a podtržítkem:
 
 Markdown soubory určené do PDF leží přímo ve složce předmětu. Jejich názvy
 určují pořadí kapitol.
+
+Předmět může obsahovat také podsložky pro samostatná měření. Export kořene
+předmětu zahrne jen soubory přímo v kořeni; výběr podsložky zahrne jen její
+přímé Markdown soubory. Například ukázkový vault obsahuje:
+
+```text
+01_DEMO/
+  0101_Ukazkova_poznamka.md
+  01_Mereni_viskozity/
+    0101_Priprava_a_postup.md
+    0102_Vysledky.md
+  02_Mereni_teploty/
+    0201_Priprava_a_postup.md
+    0202_Vysledky.md
+```
+
+V první Markdown poznámce každé měřicí podsložky jsou vlastnosti `protocol-title`,
+`authors` a `teacher`. `protocol-title` určuje titul protokolu i název PDF;
+výsledný soubor se ukládá přímo do složky daného měření. Další soubory se
+řadí podle názvu a doplňují obsah stejného protokolu. Celý postup lze projít
+v `examples/demo-vault/01_DEMO`.
 
 ## 🧪 Ukázka výstupu
 
@@ -151,6 +245,7 @@ examples/                    ukázkový vault a ukázkové PDF
 filters/                     Lua filtry pro Pandoc
 guidelines/                  pravidla pro psaní poznámek
 metadata/                    společná Pandoc metadata
+obsidian-plugin/             dynamický výběr předmětu v Obsidianu
 slides/                      sdílené soubory pro prezentace
 templates/notes.tex          Pandoc/LaTeX šablona PDF poznámek
 tools/build_notes.py         launcher pro výběr předmětu
