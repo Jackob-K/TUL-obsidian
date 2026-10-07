@@ -13,12 +13,16 @@ upravené PDF s titulní stranou, logem TUL a jednotným typografickým vzhledem
 
 ## ✨ Co to umí
 
-- exportuje celý předmět nebo jeden konkrétní Markdown soubor do PDF,
+- exportuje Markdown soubory z kořene předmětu, jeho přímé podsložky nebo jeden konkrétní soubor do PDF,
 - používá vizuální styl TUL přes XeLaTeX a přiložené univerzitní podklady,
 - načítá údaje studenta a práce z jednoduchého `config.md`,
 - podporuje Markdown poznámky psané přímo v Obsidianu,
 - používá Pandoc Lua filtry pro úpravu odkazů, tabulek a dalších detailů,
 - umožňuje sdílet jednu knihovnu mezi více vaulty přes `_shared`.
+
+Zvolený rozsah složí do jednoho PDF. Použije výchozí titulní stranu TUL;
+hodnoty z `config.md` lze pro konkrétní protokol přepsat YAML vlastnostmi
+v jeho první poznámce.
 
 ## 🧰 Požadavky
 
@@ -87,6 +91,15 @@ ln -s ../../_shared/obsidian-plugin .obsidian/plugins/tul-pdf-export
 
 Potom v `.obsidian/community-plugins.json` přidejte do seznamu povolených
 pluginů položku `tul-pdf-export` a Obsidian restartujte nebo znovu načtěte.
+
+V nastavení pluginu **Shell commands** přidejte příkaz s tímto příkazovým
+řádkem a povolte jeho zobrazení v paletě příkazů:
+
+```bash
+open 'obsidian://tul-pdf-export'
+```
+
+Jako název příkazu použijte například `Export předmětu do PDF`.
 
 ## 📦 Export
 
@@ -161,9 +174,16 @@ straně i jako název PDF, například `Měření převodovky.pdf`.
 
 ### Metadata skupinového protokolu
 
-Vlastnosti z YAML hlavičky exportované poznámky mají přednost před hodnotami z
+Podsložky umožňují rozdělit jeden předmět do několika samostatných PDF, například
+pro jednotlivá měření nebo protokoly. Metadata protokolu vložte do YAML hlavičky
+první poznámky v jeho složce. Soubory se řadí podle názvu; `protocol-title` z
+první poznámky určuje název PDF i název protokolu. Ostatní vlastnosti protokolu
+(`document-label`, `authors`, `teacher`) ponechte také v této první poznámce a
+neopakujte je v dalších souborech stejné složky.
+
+Vlastnosti z YAML hlavičky mají přednost před odpovídajícími hodnotami z
 kořenového `config.md`. Seznam `authors` a text `teacher` lze upravovat přímo
-v panelu Properties v Obsidianu. Tituly se zapisují jako součást celého jména:
+v panelu Properties v Obsidianu. Tituly se zapisují jako součást jména:
 
 ```yaml
 ---
@@ -214,7 +234,7 @@ přímé Markdown soubory. Například ukázkový vault obsahuje:
 ```
 
 V první Markdown poznámce každé měřicí podsložky jsou vlastnosti `protocol-title`,
-`authors` a `teacher`. `protocol-title` určuje titul protokolu i název PDF;
+`authors` a `teacher`. `protocol-title` určuje název protokolu i název PDF;
 výsledný soubor se ukládá přímo do složky daného měření. Další soubory se
 řadí podle názvu a doplňují obsah stejného protokolu. Celý postup lze projít
 v `examples/demo-vault/01_DEMO`.
