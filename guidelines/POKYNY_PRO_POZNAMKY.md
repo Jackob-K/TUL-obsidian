@@ -51,6 +51,7 @@ Co nesplňuje žádný z těchto účelů, zpravidla odstranit.
 - Související matice sázet vedle sebe, pokud se vejdou na šířku stránky.
 - Neopakovat název odkázané poznámky ve větě i v odkazu.
 - Optimalizovat nejen počet slov, ale také délku dokumentu a orientaci v osnově.
+- Popisky obrázků a tabulek umisťovat vždy pod příslušný prvek.
 
 ## Odkazy
 

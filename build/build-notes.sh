@@ -112,8 +112,8 @@ else
 fi
 CONFIG_METADATA=$(mktemp "${TMPDIR:-/tmp}/tul-notes-config.XXXXXX")
 BUILD_METADATA=$(mktemp "${TMPDIR:-/tmp}/tul-notes-build.XXXXXX")
-SVG_PDF_DIR=$(mktemp -d "${TMPDIR:-/tmp}/tul-notes-svg-pdf.XXXXXX")
-trap 'rm -f "$CONFIG_METADATA" "$BUILD_METADATA"; rm -rf "$SVG_PDF_DIR"' EXIT
+ASSET_DIR=$(mktemp -d "${TMPDIR:-/tmp}/tul-notes-assets.XXXXXX")
+trap 'rm -f "$CONFIG_METADATA" "$BUILD_METADATA"; rm -rf "$ASSET_DIR"' EXIT
 
 case "$SUBJECT" in
   00_Obecne_vedomosti)
@@ -168,39 +168,38 @@ fi
 python3 "$ROOT/_shared/build/read-notes-config.py" "$CONFIG" "$CONFIG_METADATA"
 python3 -c 'import json,sys; json.dump({"subject-title": sys.argv[2], "year": sys.argv[3]}, open(sys.argv[1], "w", encoding="utf-8"), ensure_ascii=False)' "$BUILD_METADATA" "$SUBJECT_TITLE" "$YEAR"
 
-# Convert SVG assets to vector PDFs in a temporary mirrored directory.
-# Source SVG files remain untouched.
-python3 "$ROOT/_shared/build/convert-svg-to-pdf.py" "$EXPORT_PATH" "$SVG_PDF_DIR"
+# Convert SVG and unsupported raster assets in a temporary mirrored directory.
+# Source image files remain untouched.
+python3 "$ROOT/_shared/build/convert-assets.py" "$EXPORT_PATH" "$ASSET_DIR"
 
 SUBJECT_CODE="${SUBJECT#*_}"
 SUBJECT_CODE="${SUBJECT_CODE%%_*}"
 AUTHOR_FILE_PART=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["author-file-part"])' "$CONFIG_METADATA")
+STANDARD_OUTPUT_FILENAME="${SUBJECT_CODE}_${AUTHOR_FILE_PART}_notes.pdf"
 if [ "$SINGLE_FILE" = true ]; then
-  INPUT_BASENAME="$(basename "$INPUT_FILE")"
-  INPUT_STEM="${INPUT_BASENAME%.md}"
-  PROTOCOL_TITLE=$(python3 "$ROOT/_shared/build/read-protocol-title.py" "$INPUT_FILE")
-  if [ -n "$PROTOCOL_TITLE" ]; then
-    OUTPUT_PDF="$SUBJECT_PATH/${PROTOCOL_TITLE}.pdf"
+  PROTOCOL_FILENAME=$(python3 "$ROOT/_shared/build/read-protocol-title.py" --filename "$INPUT_FILE")
+  if [ -n "$PROTOCOL_FILENAME" ]; then
+    OUTPUT_PDF="$SUBJECT_PATH/${PROTOCOL_FILENAME}.pdf"
   else
-    OUTPUT_PDF="$SUBJECT_PATH/${INPUT_STEM}_TUL.pdf"
+    OUTPUT_PDF="$SUBJECT_PATH/$STANDARD_OUTPUT_FILENAME"
   fi
 elif [ -n "$SELECTED_FOLDER" ]; then
-  FOLDER_FILE_PART=$(python3 -c 'import hashlib,re,sys; original=sys.argv[1]; slug="".join(c if c.isalnum() or c in "-_" else "_" for c in original.strip()); slug=re.sub(r"_+", "_", slug).strip("_-") or "mereni"; print(f"{slug}_{hashlib.sha256(original.encode()).hexdigest()[:8]}")' "$SELECTED_FOLDER")
   PROTOCOL_TITLE_RAW=$(python3 "$ROOT/_shared/build/read-protocol-title.py" --raw "${INPUT_FILES[0]}")
-  PROTOCOL_TITLE=$(python3 "$ROOT/_shared/build/read-protocol-title.py" "${INPUT_FILES[0]}")
-  if [ -n "$PROTOCOL_TITLE" ]; then
-    OUTPUT_PDF="$EXPORT_PATH/${PROTOCOL_TITLE}.pdf"
+  PROTOCOL_FILENAME=$(python3 "$ROOT/_shared/build/read-protocol-title.py" --filename "${INPUT_FILES[0]}")
+  if [ -n "$PROTOCOL_FILENAME" ]; then
+    OUTPUT_PDF="$EXPORT_PATH/${PROTOCOL_FILENAME}.pdf"
   else
-    OUTPUT_PDF="$EXPORT_PATH/${SUBJECT_CODE}_${FOLDER_FILE_PART}_${AUTHOR_FILE_PART}_notes.pdf"
+    OUTPUT_PDF="$EXPORT_PATH/$STANDARD_OUTPUT_FILENAME"
   fi
   PANDOC_TITLE_OVERRIDE=(--metadata "protocol-title:$PROTOCOL_TITLE_RAW")
 else
-  OUTPUT_PDF="$SUBJECT_PATH/${SUBJECT_CODE}_${AUTHOR_FILE_PART}_notes.pdf"
+  OUTPUT_PDF="$SUBJECT_PATH/$STANDARD_OUTPUT_FILENAME"
 fi
 
 export TEXINPUTS="$ROOT/_shared/tul//:"
 export SUBJECT_PATH="$EXPORT_PATH"
-export SVG_PDF_PATH="$SVG_PDF_DIR"
+export SVG_PDF_PATH="$ASSET_DIR"
+export CONVERTED_ASSET_PATH="$ASSET_DIR"
 export PYTHONDONTWRITEBYTECODE=1
 
 (
@@ -212,8 +211,9 @@ export PYTHONDONTWRITEBYTECODE=1
     --metadata-file="$CONFIG_METADATA" \
     "${INPUT_FILES[@]}" \
     "${PANDOC_TITLE_OVERRIDE[@]}" \
-    --resource-path="$ROOT:$SUBJECT_PATH:$SUBJECT_PATH/Graphs:$SUBJECT_PATH/Images:$EXPORT_PATH:$EXPORT_PATH/Graphs:$EXPORT_PATH/Images:$SVG_PDF_DIR" \
+    --resource-path="$ROOT:$SUBJECT_PATH:$SUBJECT_PATH/Graphs:$SUBJECT_PATH/Images:$EXPORT_PATH:$EXPORT_PATH/Graphs:$EXPORT_PATH/Images:$ASSET_DIR" \
     --lua-filter="$ROOT/_shared/filters/wikilinks.lua" \
+    --lua-filter="$ROOT/_shared/filters/strip-percent-comments.lua" \
     --lua-filter="$ROOT/_shared/filters/tables.lua" \
     --lua-filter="$ROOT/_shared/filters/remove-hr.lua" \
     --lua-filter="$ROOT/_shared/filters/svg-to-png.lua" \

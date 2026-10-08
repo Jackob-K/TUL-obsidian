@@ -26,20 +26,19 @@ function Image(img)
     return {}
   end
 
-  local unsupported = img.src:match("%.webp$")
-    or img.src:match("%.tif$")
-    or img.src:match("%.tiff$")
-  if not unsupported then
+  local extension = img.src:lower():match("%.([^.]+)$")
+  if extension ~= "webp" and extension ~= "tif" and extension ~= "tiff"
+      and extension ~= "heic" and extension ~= "heif" then
     return img
   end
 
   local png = img.src:gsub("%.[^.]+$", ".png")
-  local subject_path = os.getenv("SUBJECT_PATH")
-  if subject_path then
-    local file = io.open(subject_path .. "/" .. png, "r")
+  local asset_path = os.getenv("CONVERTED_ASSET_PATH")
+  if asset_path then
+    local file = io.open(asset_path .. "/" .. png, "r")
     if file then
       file:close()
-      img.src = png
+      img.src = asset_path .. "/" .. png
       return img
     end
   end

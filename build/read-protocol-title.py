@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read and safely normalize the optional protocol-title metadata value."""
+"""Read protocol title or output filename metadata from a Markdown note."""
 
 from __future__ import annotations
 
@@ -40,27 +40,31 @@ def metadata_text(value: object) -> str:
     return ""
 
 
-def safe_filename_stem(title: str) -> str:
-    title = unicodedata.normalize("NFC", title)
-    title = re.sub(r"[\\/:*?\"<>|\x00-\x1f]", "-", title)
-    title = re.sub(r"\s+", " ", title).strip(" .")
-    title = title.lstrip(".")
-    return title
+def safe_filename_stem(value: str, remove_pdf_extension: bool = False) -> str:
+    value = unicodedata.normalize("NFC", value)
+    value = re.sub(r"[\\/:*?\"<>|\x00-\x1f]", "-", value)
+    value = re.sub(r"\s+", " ", value).strip(" .")
+    value = value.lstrip(".")
+    if remove_pdf_extension and value.lower().endswith(".pdf"):
+        value = value[:-4].rstrip(" .")
+    return value
 
 
 def main() -> int:
     raw_mode = len(sys.argv) == 3 and sys.argv[1] == "--raw"
-    if raw_mode:
+    filename_mode = len(sys.argv) == 3 and sys.argv[1] == "--filename"
+    if raw_mode or filename_mode:
         source = Path(sys.argv[2])
     elif len(sys.argv) == 2:
         source = Path(sys.argv[1])
     else:
         print(
-            f"Použití: {Path(sys.argv[0]).name} [--raw] SOUBOR.md",
+            f"Použití: {Path(sys.argv[0]).name} [--raw|--filename] SOUBOR.md",
             file=sys.stderr,
         )
         return 2
 
+    field = "protocol-filename" if filename_mode else "protocol-title"
     try:
         result = subprocess.run(
             ["pandoc", "--from=markdown+yaml_metadata_block", "--to=json", str(source)],
@@ -70,15 +74,15 @@ def main() -> int:
             encoding="utf-8",
         )
         document = json.loads(result.stdout)
-        title = metadata_text(document.get("meta", {}).get("protocol-title"))
+        value = metadata_text(document.get("meta", {}).get(field))
         if not raw_mode:
-            title = safe_filename_stem(title)
-            if title in {"", ".", ".."}:
-                title = ""
-        print(title)
+            value = safe_filename_stem(value, remove_pdf_extension=filename_mode)
+            if value in {"", ".", ".."}:
+                value = ""
+        print(value)
         return 0
     except (OSError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
-        print(f"Chyba při čtení vlastnosti protocol-title: {error}", file=sys.stderr)
+        print(f"Chyba při čtení vlastnosti {field}: {error}", file=sys.stderr)
         return 2
 
 

@@ -14,6 +14,7 @@ upravené PDF s titulní stranou, logem TUL a jednotným typografickým vzhledem
 ## ✨ Co to umí
 
 - exportuje Markdown soubory z kořene předmětu, jeho přímé podsložky nebo jeden konkrétní soubor do PDF,
+- převádí SVG do vektorového PDF pomocí `rsvg-convert` a podporované rastrové fotografie připravuje pro sazbu,
 - používá vizuální styl TUL přes XeLaTeX a přiložené univerzitní podklady,
 - načítá údaje studenta a práce z jednoduchého `config.md`,
 - podporuje Markdown poznámky psané přímo v Obsidianu,
@@ -34,11 +35,27 @@ Pro běžné použití budete potřebovat:
 - komunitní plugin **Shell commands** pro Obsidian,
 - doplňkový plugin **TUL PDF Export** ze složky `obsidian-plugin/`,
 - Python 3,
+- Homebrew `librsvg` (příkaz `rsvg-convert`) pro SVG obrázky,
+- Python balíček Pillow pro převod WebP/TIFF fotografií,
 - Pandoc,
 - XeLaTeX, například z MacTeX nebo BasicTeX.
 
 Nemusíte být programátor. Typický postup je jednou připojit knihovnu k vaultu,
 vyplnit `config.md` a potom export spouštět z Obsidianu.
+
+Po připojení knihovny do vaultu nainstalujte systémovou a Python závislost:
+
+```bash
+brew bundle --file _shared/Brewfile
+python3 -m pip install -r _shared/requirements.txt
+```
+
+`Brewfile` instaluje systémový program `rsvg-convert` z balíčku `librsvg`.
+Soubor `requirements.txt` obsahuje Python balíčky. SVG se převádí do vektorového
+PDF bez Inkscape; WebP a TIFF se dočasně převádějí na PNG přes Pillow. HEIC/HEIF
+se na macOS převádí systémovým `sips`; zdrojové obrázky zůstávají beze změny.
+Pandoc a XeLaTeX je potřeba nainstalovat samostatně podle jejich instalačních
+pokynů.
 
 ## ⚡ Rychlý start
 
